@@ -219,11 +219,11 @@ if st.button("Iniciar Animação"):
         fig, update, init = criar_animacao()
         ani = animation.FuncAnimation(fig, update, init_func=init, frames=100, interval=100, blit=True)
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as f:
-            temp_video_path = Path(f.name)
-            ani.save(str(temp_video_path), fps=10, extra_args=['-vcodec', 'libx264'])
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".gif") as f:
+            temp_gif_path = Path(f.name)
+            ani.save(str(temp_gif_path), writer='pillow', fps=10)
 
-        st.video(str(temp_video_path))
+        st.image(str(temp_gif_path), caption=f"Simulação do mecanismo de ação de {anestesico_selecionado}")
 
 st.header("Explicação do Mecanismo de Ação")
 st.markdown(f"""
