@@ -1,9 +1,6 @@
 import streamlit as st
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 import numpy as np
-import tempfile
-from pathlib import Path
 from matplotlib.patches import Rectangle, FancyArrowPatch
 import matplotlib.patheffects as path_effects
 from dados_anestesicos import anestesicos, calcular_base_livre
@@ -55,9 +52,8 @@ st.sidebar.markdown(f"""
 - % Base (RN): {base_percent_tabela}%
 """)
 
-def criar_animacao():
+def criar_imagem_estatica(etapa=1):
     fig, ax = plt.subplots(figsize=(10, 6))
-    plt.close()
     
     cor_extracelular = '#ffcccc'
     cor_intracelular = '#ffffcc'
@@ -93,137 +89,122 @@ def criar_animacao():
     n_rn = int(n_particulas * (base_percent / 100))
     n_rnh = n_particulas - n_rn
     
+    # Posições iniciais das partículas
+    np.random.seed(42)  # Para reprodutibilidade
+    
+    # RNH+ no extracelular (não atravessa a membrana)
     rnh_extra_x = np.random.uniform(0.1, 0.3, n_rnh)
     rnh_extra_y = np.random.uniform(0.6, 0.9, n_rnh)
     
+    # RN no extracelular (atravessa a membrana)
     rn_extra_x = np.random.uniform(0.7, 0.9, n_rn)
     rn_extra_y = np.random.uniform(0.6, 0.9, n_rn)
     
+    # Partículas no intracelular (inicialmente vazias)
     rn_intra_x = np.array([])
     rn_intra_y = np.array([])
     
     rnh_intra_x = np.array([])
     rnh_intra_y = np.array([])
     
-    particulas_rnh_extra = ax.scatter(rnh_extra_x, rnh_extra_y, color='red', s=50, alpha=0.7, label='RNH⁺ (Extracelular)')
-    particulas_rn_extra = ax.scatter(rn_extra_x, rn_extra_y, color='blue', s=50, alpha=0.7, label='RN (Extracelular)')
-    particulas_rn_intra = ax.scatter([], [], color='blue', s=50, alpha=0.7, label='RN (Intracelular)')
-    particulas_rnh_intra = ax.scatter([], [], color='red', s=50, alpha=0.7, label='RNH⁺ (Intracelular)')
+    # Etapa 1: Estado inicial
+    if etapa >= 1:
+        ax.scatter(rnh_extra_x, rnh_extra_y, color='red', s=50, alpha=0.7, label='RNH⁺ (Extracelular)')
+        ax.scatter(rn_extra_x, rn_extra_y, color='blue', s=50, alpha=0.7, label='RN (Extracelular)')
     
-    seta1 = ax.add_patch(FancyArrowPatch((0.5, 0.7), (0.5, 0.6), 
-                                         arrowstyle='->', mutation_scale=15, 
-                                         color='black', linewidth=2))
-    seta2 = ax.add_patch(FancyArrowPatch((0.5, 0.3), (0.5, 0.4), 
-                                         arrowstyle='->', mutation_scale=15, 
-                                         color='black', linewidth=2))
+    # Etapa 2: RN começa a atravessar a membrana
+    if etapa >= 2:
+        # Selecionar algumas partículas RN para atravessar
+        n_atravessando = min(3, n_rn)
+        for i in range(n_atravessando):
+            # Posicionar na membrana
+            ax.scatter(rn_extra_x[i], 0.5, color='blue', s=50, alpha=0.7)
+            # Remover da posição original
+            rn_extra_x[i] = np.nan
+            rn_extra_y[i] = np.nan
+        
+        # Atualizar o gráfico de RN no extracelular
+        ax.scatter(rn_extra_x, rn_extra_y, color='blue', s=50, alpha=0.7)
+        
+        # Adicionar seta indicando movimento
+        ax.add_patch(FancyArrowPatch((0.5, 0.7), (0.5, 0.6), 
+                                    arrowstyle='->', mutation_scale=15, 
+                                    color='black', linewidth=2))
     
-    canal_x = 0.4
-    canal_y = 0.2
-    canal = ax.add_patch(Rectangle((canal_x-0.05, canal_y-0.05), 0.1, 0.1, 
-                                  facecolor='gray', edgecolor='black', alpha=0.7))
-    texto_canal = ax.text(canal_x, canal_y-0.1, "Canal de Na⁺", ha='center', fontsize=8)
+    # Etapa 3: RN chega ao intracelular
+    if etapa >= 3:
+        # Adicionar RN no intracelular
+        rn_intra_x = np.array([0.7, 0.8, 0.75])
+        rn_intra_y = np.array([0.2, 0.3, 0.25])
+        ax.scatter(rn_intra_x, rn_intra_y, color='blue', s=50, alpha=0.7, label='RN (Intracelular)')
+    
+    # Etapa 4: RN se converte parcialmente em RNH+ no intracelular
+    if etapa >= 4:
+        # Converter algumas partículas RN em RNH+
+        rnh_intra_x = np.array([0.3, 0.2])
+        rnh_intra_y = np.array([0.2, 0.3])
+        ax.scatter(rnh_intra_x, rnh_intra_y, color='red', s=50, alpha=0.7, label='RNH⁺ (Intracelular)')
+        
+        # Remover algumas partículas RN (convertidas)
+        rn_intra_x = np.array([0.75])
+        rn_intra_y = np.array([0.25])
+        ax.scatter(rn_intra_x, rn_intra_y, color='blue', s=50, alpha=0.7)
+    
+    # Etapa 5: RNH+ bloqueia o canal de sódio
+    if etapa >= 5:
+        # Adicionar canal de sódio
+        canal_x = 0.4
+        canal_y = 0.2
+        ax.add_patch(Rectangle((canal_x-0.05, canal_y-0.05), 0.1, 0.1, 
+                              facecolor='gray', edgecolor='black', alpha=0.7))
+        ax.text(canal_x, canal_y-0.1, "Canal de Na⁺", ha='center', fontsize=8)
+        
+        # Mover RNH+ para o canal
+        rnh_intra_x = np.array([0.4, 0.38])
+        rnh_intra_y = np.array([0.2, 0.22])
+        ax.scatter(rnh_intra_x, rnh_intra_y, color='red', s=50, alpha=0.7)
+        
+        # Adicionar seta indicando bloqueio
+        ax.add_patch(FancyArrowPatch((0.3, 0.3), (0.38, 0.22), 
+                                    arrowstyle='->', mutation_scale=15, 
+                                    color='black', linewidth=2))
     
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.set_aspect('equal')
     ax.axis('off')
     
-    ax.set_title(f"Mecanismo de Ação: {anestesico_selecionado} (pKa: {pKa})", fontsize=14, fontweight='bold')
+    titulo = f"Mecanismo de Ação: {anestesico_selecionado} (pKa: {pKa})"
+    if etapa == 1:
+        titulo += " - Estado Inicial"
+    elif etapa == 2:
+        titulo += " - RN Atravessa a Membrana"
+    elif etapa == 3:
+        titulo += " - RN Chega ao Intracelular"
+    elif etapa == 4:
+        titulo += " - RN se Converte em RNH⁺"
+    elif etapa == 5:
+        titulo += " - RNH⁺ Bloqueia o Canal de Na⁺"
+    
+    ax.set_title(titulo, fontsize=14, fontweight='bold')
     ax.legend(loc='upper right', fontsize=8)
     
-    rn_atravessando = []
-    
-    def init():
-        particulas_rnh_extra.set_offsets(np.column_stack((rnh_extra_x, rnh_extra_y)))
-        particulas_rn_extra.set_offsets(np.column_stack((rn_extra_x, rn_extra_y)))
-        particulas_rn_intra.set_offsets(np.empty((0, 2)))
-        particulas_rnh_intra.set_offsets(np.empty((0, 2)))
-        return (particulas_rnh_extra, particulas_rn_extra, 
-                particulas_rn_intra, particulas_rnh_intra)
-    
-    def update(frame):
-        nonlocal rn_atravessando, rn_intra_x, rn_intra_y, rnh_intra_x, rnh_intra_y
-        
-        rnh_extra_x += np.random.normal(0, 0.01, n_rnh)
-        rnh_extra_y += np.random.normal(0, 0.01, n_rnh)
-        
-        rnh_extra_x = np.clip(rnh_extra_x, 0.05, 0.35)
-        rnh_extra_y = np.clip(rnh_extra_y, 0.55, 0.95)
-        
-        particulas_rnh_extra.set_offsets(np.column_stack((rnh_extra_x, rnh_extra_y)))
-        
-        for i in range(len(rn_extra_x)):
-            if i not in [r[0] for r in rn_atravessando]:
-                rn_extra_x[i] += np.random.normal(0, 0.01)
-                rn_extra_y[i] += np.random.normal(0, 0.01)
-                
-                rn_extra_x[i] = np.clip(rn_extra_x[i], 0.65, 0.95)
-                rn_extra_y[i] = np.clip(rn_extra_y[i], 0.55, 0.95)
-                
-                if np.random.random() < 0.02 and len(rn_atravessando) < 3:
-                    rn_atravessando.append((i, 0))
-        
-        new_rn_atravessando = []
-        for idx, progresso in rn_atravessando:
-            progresso += 0.05
-            if progresso < 1:
-                new_rn_atravessando.append((idx, progresso))
-                rn_extra_y[idx] = 0.9 - progresso * 0.5
-            else:
-                if np.random.random() < 0.3:
-                    rnh_intra_x = np.append(rnh_intra_x, rn_extra_x[idx])
-                    rnh_intra_y = np.append(rnh_intra_y, 0.2)
-                else:
-                    rn_intra_x = np.append(rn_intra_x, rn_extra_x[idx])
-                    rn_intra_y = np.append(rn_intra_y, 0.2)
-                
-                rn_extra_x[idx] = np.nan
-                rn_extra_y[idx] = np.nan
-        
-        rn_atravessando = new_rn_atravessando
-        
-        for i in range(len(rn_intra_x)):
-            rn_intra_x[i] += np.random.normal(0, 0.01)
-            rn_intra_y[i] += np.random.normal(0, 0.01)
-            
-            rn_intra_x[i] = np.clip(rn_intra_x[i], 0.05, 0.95)
-            rn_intra_y[i] = np.clip(rn_intra_y[i], 0.05, 0.45)
-        
-        for i in range(len(rnh_intra_x)):
-            rnh_intra_x[i] += np.random.normal(0, 0.01)
-            rnh_intra_y[i] += np.random.normal(0, 0.01)
-            
-            rnh_intra_x[i] = np.clip(rnh_intra_x[i], 0.05, 0.95)
-            rnh_intra_y[i] = np.clip(rnh_intra_y[i], 0.05, 0.45)
-            
-            dist_canal = np.sqrt((rnh_intra_x[i] - canal_x)**2 + (rnh_intra_y[i] - canal_y)**2)
-            if dist_canal < 0.1:
-                dx = canal_x - rnh_intra_x[i]
-                dy = canal_y - rnh_intra_y[i]
-                rnh_intra_x[i] += dx * 0.1
-                rnh_intra_y[i] += dy * 0.1
-        
-        particulas_rn_extra.set_offsets(np.column_stack((rn_extra_x, rn_extra_y)))
-        particulas_rn_intra.set_offsets(np.column_stack((rn_intra_x, rn_intra_y)))
-        particulas_rnh_intra.set_offsets(np.column_stack((rnh_intra_x, rnh_intra_y)))
-        
-        return (particulas_rnh_extra, particulas_rn_extra,
-                particulas_rn_intra, particulas_rnh_intra)
-    
-    return fig, update, init
+    return fig
 
-st.header("Animação do Mecanismo de Ação")
+st.header("Visualização do Mecanismo de Ação")
 
-if st.button("Iniciar Animação"):
-    with st.spinner("Gerando animação..."):
-        fig, update, init = criar_animacao()
-        ani = animation.FuncAnimation(fig, update, init_func=init, frames=100, interval=100, blit=True)
+etapa = st.slider("Etapa do mecanismo:", 1, 5, 1)
+descricoes = [
+    "Estado inicial: Distribuição das formas RN e RNH⁺ no meio extracelular",
+    "RN atravessa a membrana da bainha do nervo",
+    "RN chega ao meio intracelular",
+    "RN se converte parcialmente em RNH⁺ no meio intracelular",
+    "RNH⁺ bloqueia o canal de sódio"
+]
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".gif") as f:
-            temp_gif_path = Path(f.name)
-            ani.save(str(temp_gif_path), writer='pillow', fps=10)
-
-        st.image(str(temp_gif_path), caption=f"Simulação do mecanismo de ação de {anestesico_selecionado}")
+st.caption(descricoes[etapa-1])
+fig = criar_imagem_estatica(etapa)
+st.pyplot(fig)
 
 st.header("Explicação do Mecanismo de Ação")
 st.markdown(f"""
