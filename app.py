@@ -6,83 +6,120 @@ import matplotlib.patheffects as path_effects
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.patches as mpatches
 
-# Assumindo que o arquivo dados_anestesicos.py existe
-try:
-    from dados_anestesicos import anestesicos, calcular_base_livre
-except ImportError:
-    # Definição de backup caso o arquivo não exista
-    def calcular_base_livre(pKa, pH):
-        return 100 / (1 + 10**(pKa - pH))
-    
-    anestesicos = {
-        "Lidocaína": {
-            "tipo": "Amida",
-            "pKa": 7.9,
-            "base_percent": 24,
-            "inicio_acao": "2-5"
-        },
-        "Bupivacaína": {
-            "tipo": "Amida",
-            "pKa": 8.1,
-            "base_percent": 17,
-            "inicio_acao": "5-8"
-        },
-        "Procaína": {
-            "tipo": "Éster",
-            "pKa": 8.9,
-            "base_percent": 3,
-            "inicio_acao": "6-10"
-        }
-    }
-
+# Configuração da página
 st.set_page_config(
-    page_title="Simulador de Anestésicos Locais",
+    page_title="Anestésicos Locais - Simulador e Calculadora",
     page_icon="💉",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("Simulador do Mecanismo de Ação de Anestésicos Locais")
-st.markdown("""
-Este simulador demonstra como os anestésicos locais exercem seu efeito bloqueador
-nos canais de sódio, com base nas propriedades físico-químicas de cada agente.
-""")
+# Dados dos anestésicos
+anestesicos = {
+    "Lidocaína": {
+        "tipo": "Amida",
+        "pKa": 7.9,
+        "base_percent": 24,
+        "inicio_acao": "2-5"
+    },
+    "Bupivacaína": {
+        "tipo": "Amida",
+        "pKa": 8.1,
+        "base_percent": 17,
+        "inicio_acao": "5-8"
+    },
+    "Procaína": {
+        "tipo": "Éster",
+        "pKa": 8.9,
+        "base_percent": 3,
+        "inicio_acao": "6-10"
+    },
+    "Mepivacaína": {
+        "tipo": "Amida",
+        "pKa": 7.6,
+        "base_percent": 39,
+        "inicio_acao": "3-5"
+    },
+    "Prilocaína": {
+        "tipo": "Amida",
+        "pKa": 7.9,
+        "base_percent": 25,
+        "inicio_acao": "2-4"
+    },
+    "Articaína": {
+        "tipo": "Amida/Éster",
+        "pKa": 7.8,
+        "base_percent": 29,
+        "inicio_acao": "1-3"
+    }
+}
 
-anestesico_selecionado = st.sidebar.selectbox(
-    "Escolha um anestésico:",
-    list(anestesicos.keys())
-)
+# Função para calcular a porcentagem de base livre
+def calcular_base_livre(pKa, pH):
+    return 100 / (1 + 10**(pKa - pH))
 
-st.sidebar.subheader("Propriedades do Anestésico")
-st.sidebar.markdown(f"""
-- **Tipo:** {anestesicos[anestesico_selecionado]['tipo']}
-- **pKa:** {anestesicos[anestesico_selecionado]['pKa']}
-- **% Base (RN) em pH 7,4:** {anestesicos[anestesico_selecionado]['base_percent']}%
-- **Início de ação:** {anestesicos[anestesico_selecionado]['inicio_acao']} minutos
-""")
+# Função para calcular dose máxima
+def calcular_dose_maxima(sal_anestesico, concentracao, peso, vasoconstritor=None, asa=None):
+    doses = {
+        'lidocaina': {'dose_maxima': 7.0, 'concentracao': {'2%': 20, '3%': 30}, 'dose_maxima_absoluta': 500},
+        'mepivacaina': {'dose_maxima': 6.6, 'concentracao': {'3%': 30, '2%': 20}, 'dose_maxima_absoluta': 400},
+        'prilocaina': {'dose_maxima': 8.0, 'concentracao': {'3%': 30, '4%': 40}, 'dose_maxima_absoluta': 600},
+        'articaina': {'dose_maxima': 7.0, 'concentracao': {'4%': 40}, 'dose_maxima_absoluta': None},
+        'bupivacaina': {'dose_maxima': 2.0, 'concentracao': {'0.5%': 5}, 'dose_maxima_absoluta': 90}
+    }
 
-with st.sidebar.expander("Equação de Henderson-Hasselbalch"):
-    st.markdown(r"""
-    $$\% \text{base livre (RN)} = \frac{1}{1 + 10^{(pKa - pH)}} \times 100$$
-    """)
+    vasoconstritores = {
+        '1:50000 epinefrina': {'ASA I/II': 5.5, 'ASA III/IV': 1},
+        '1:100000 epinefrina': {'ASA I/II': 11, 'ASA III/IV': 2},
+        '1:200000 epinefrina': {'ASA I/II': 22, 'ASA III/IV': 4},
+        '1:30000 noradrenalina': {'ASA I/II': 5.5, 'ASA III/IV': 2},
+        '1:2500 fenilefrina': {'ASA I/II': 5.5, 'ASA III/IV': 2},
+        '0.03UI/ml felipressina': {'ASA I/II': float('inf'), 'ASA III/IV': 5}
+    }
 
-pKa = anestesicos[anestesico_selecionado]['pKa']
-pH = 7.4
-base_percent_calculada = calcular_base_livre(pKa, pH)
-acid_percent_calculada = 100 - base_percent_calculada
-base_percent_tabela = anestesicos[anestesico_selecionado]['base_percent']
+    observacoes = {
+        'lidocaina': "🟢 **Lidocaína**\n💠 Metabolizada no fígado\n💠 Excretada pelos rins.",
+        'mepivacaina': "🟡 **Mepivacaína**\n💠 Metabolizada no fígado\n💠 Excretada pelos rins.",
+        'prilocaina': "🔴 **Prilocaína**\n💠 Metabolizada no fígado, rins e pulmão\n⚠️ *Risco de Metemoglobinemia.*",
+        'articaina': "🟣 **Articaína**\n💠 Características amida e éster\n💠 Metabolizada no fígado e plasma\n⚠️ *Risco aumentado de parestesia e Metemoglobinemia.*",
+        'bupivacaina': "🔵 **Bupivacaína**\n💠 Metabolizada no fígado\n💠 Excretada nos rins\n⚠️ *Cardiotóxica.*",
+    }
 
-st.sidebar.subheader("Cálculos")
-st.sidebar.markdown(f"""
-**Usando a equação de Henderson-Hasselbalch:**
-- % Base (RN) calculada: {base_percent_calculada:.2f}%
-- % Ácido (RNH⁺) calculada: {acid_percent_calculada:.2f}%
+    vasoconstritor_observacoes = {
+        'epinefrina': "💉 **Adrenalina**\n📈  Aumento da PA e consumo de O2\n🫁 Dilatação dos bronquíolos\n🍬 Aumento da glicose.",
+        'noradrenalina': "💉 **Noradrenalina**\n🩸 Vasoconstrição prolongada\n📈  Aumento da PA.",
+        'fenilefrina': "💉 **Fenilefrina**\n🔸 Pouco efeito sobre o coração\n🩸 Vasoconstrição prolongada\n📈  Aumento da PA.",
+        'felipressina': "💉 **Felipressina**\n⚠️ Reduz fluxo sanguíneo coronariano\n⚠️ Ação ocitócica - * 🔴🤰contraindicada em gestantes.*"
+    }
 
-**Valor da tabela:**
-- % Base (RN): {base_percent_tabela}%
-""")
+    if peso > 80:
+        peso = 80
 
-def criar_imagem_mecanismo():
+    if sal_anestesico not in doses or concentracao not in doses[sal_anestesico]['concentracao']:
+        return "Sal anestésico ou concentração desconhecida."
+
+    dose_maxima_kg = doses[sal_anestesico]['dose_maxima']
+    dose_por_ml = doses[sal_anestesico]['concentracao'][concentracao]
+    dose_maxima_absoluta = doses[sal_anestesico]['dose_maxima_absoluta']
+
+    dose_maxima_mg = min(dose_maxima_kg * peso, dose_maxima_absoluta or float('inf'))
+    volume_maximo_ml = dose_maxima_mg / dose_por_ml
+    numero_de_tubetes = volume_maximo_ml / 1.8
+
+    if vasoconstritor and vasoconstritor in vasoconstritores and asa:
+        numero_de_tubetes = min(numero_de_tubetes, vasoconstritores[vasoconstritor].get(asa, float('inf')))
+
+    obs = observacoes.get(sal_anestesico, "")
+    vaso_obs = ""
+    for key, value in vasoconstritor_observacoes.items():
+        if key in (vasoconstritor or "").lower():
+            vaso_obs = value
+            break
+
+    return dose_maxima_mg, int(numero_de_tubetes), obs, vaso_obs
+
+# Função para criar a imagem do mecanismo de ação
+def criar_imagem_mecanismo(anestesico_selecionado, pKa, pH):
     # Usar figsize fixo
     fig, ax = plt.subplots(figsize=(10, 6))
     
@@ -219,34 +256,182 @@ def criar_imagem_mecanismo():
     
     return fig
 
-st.header("Visualização do Mecanismo de Ação")
+# Título principal do aplicativo
+st.title("💉 Anestésicos Locais - Simulador e Calculadora")
+st.markdown("---")
 
-# Exibir apenas a imagem final (etapa 5)
-fig = criar_imagem_mecanismo()
-st.pyplot(fig)
+# Criação de abas para separar as funcionalidades
+tab1, tab2 = st.tabs(["📊 Simulador do Mecanismo de Ação", "🧮 Calculadora de Dose Máxima"])
 
-st.header("Explicação do Mecanismo de Ação")
-st.markdown(f"""
-### Como funciona o anestésico local {anestesico_selecionado}:
+# Aba 1: Simulador do Mecanismo de Ação
+with tab1:
+    st.header("Simulador do Mecanismo de Ação de Anestésicos Locais")
+    st.markdown("""
+    Este simulador demonstra como os anestésicos locais exercem seu efeito bloqueador
+    nos canais de sódio, com base nas propriedades físico-químicas de cada agente.
+    """)
+    
+    # Seleção do anestésico na barra lateral
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        anestesico_selecionado = st.selectbox(
+            "Escolha um anestésico:",
+            list(anestesicos.keys()),
+            key="simulador_anestesico"
+        )
+        
+        st.subheader("Propriedades do Anestésico")
+        st.markdown(f"""
+        - **Tipo:** {anestesicos[anestesico_selecionado]['tipo']}
+        - **pKa:** {anestesicos[anestesico_selecionado]['pKa']}
+        - **% Base (RN) em pH 7,4:** {anestesicos[anestesico_selecionado]['base_percent']}%
+        - **Início de ação:** {anestesicos[anestesico_selecionado]['inicio_acao']} minutos
+        """)
+        
+        with st.expander("Equação de Henderson-Hasselbalch"):
+            st.markdown(r"""
+            $$\% \text{base livre (RN)} = \frac{1}{1 + 10^{(pKa - pH)}} \times 100$$
+            """)
+        
+        pKa = anestesicos[anestesico_selecionado]['pKa']
+        pH = 7.4
+        base_percent_calculada = calcular_base_livre(pKa, pH)
+        acid_percent_calculada = 100 - base_percent_calculada
+        base_percent_tabela = anestesicos[anestesico_selecionado]['base_percent']
+        
+        st.subheader("Cálculos")
+        st.markdown(f"""
+        **Usando a equação de Henderson-Hasselbalch:**
+        - % Base (RN) calculada: {base_percent_calculada:.2f}%
+        - % Ácido (RNH⁺) calculada: {acid_percent_calculada:.2f}%
+        
+        **Valor da tabela:**
+        - % Base (RN): {base_percent_tabela}%
+        """)
+    
+    with col2:
+        # Exibir a imagem do mecanismo de ação
+        fig = criar_imagem_mecanismo(anestesico_selecionado, pKa, pH)
+        st.pyplot(fig)
+    
+    st.header("Explicação do Mecanismo de Ação")
+    st.markdown(f"""
+    ### Como funciona o anestésico local {anestesico_selecionado}:
+    
+    1. **Equilíbrio ácido-base no meio extracelular (pH 7,4)**:
+       - O anestésico existe em duas formas: ionizada (RNH⁺) e não-ionizada (RN)
+       - Com pKa de {pKa}, aproximadamente {anestesicos[anestesico_selecionado]['base_percent']}% está na forma de base livre (RN)
+    
+    2. **Travessia da membrana**:
+       - Apenas a forma não-ionizada (RN) consegue atravessar a membrana lipídica da bainha do nervo
+       - Quanto maior a proporção de RN, mais rápida é a penetração no nervo
+    
+    3. **Reequilíbrio no meio intracelular (pH 7,4)**:
+       - No interior da célula, o anestésico se reequilibra nas formas RN e RNH⁺
+       - A forma ionizada (RNH⁺) é a responsável pelo bloqueio dos canais de sódio
+    
+    4. **Bloqueio do canal de sódio**:
+       - RNH⁺ se move em direção ao canal de sódio localizado na bainha do nervo
+       - RNH⁺ se liga ao receptor no canal de sódio, bloqueando-o
+       - Isso impede a propagação do potencial de ação
+       - Resulta em bloqueio da condução nervosa e anestesia local
+    
+    **Referência bibliográfica:**
+    RANG, H.P.; DALE, M.M.; RITTER, J.M.; FLOWER, R.J.; HENDERSON, G. Farmacologia. 8. ed. Rio de Janeiro: Elsevier, 2016.
+    """)
 
-1. **Equilíbrio ácido-base no meio extracelular (pH 7,4)**:
-   - O anestésico existe em duas formas: ionizada (RNH⁺) e não-ionizada (RN)
-   - Com pKa de {pKa}, aproximadamente {anestesicos[anestesico_selecionado]['base_percent']}% está na forma de base livre (RN)
+# Aba 2: Calculadora de Dose Máxima
+with tab2:
+    st.header("🦷 Calculadora de Dose Máxima de Anestésico Local")
+    st.markdown("""
+    Esta calculadora ajuda a determinar a dose máxima segura de anestésicos locais
+    com base no peso do paciente, classificação ASA e presença de vasoconstritores.
+    """)
+    
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        sal_anestesico = st.selectbox(
+            "**Selecione o Sal Anestésico:**", 
+            ['lidocaina', 'mepivacaina', 'prilocaina', 'articaina', 'bupivacaina'],
+            key="calculadora_anestesico"
+        )
+        
+        concentracoes = {
+            'lidocaina': ['2%', '3%'], 
+            'mepivacaina': ['3%', '2%'], 
+            'prilocaina': ['3%', '4%'], 
+            'articaina': ['4%'], 
+            'bupivacaina': ['0.5%']
+        }
+        
+        concentracao = st.selectbox(
+            "**Selecione a Concentração:**", 
+            concentracoes.get(sal_anestesico, []),
+            key="calculadora_concentracao"
+        )
+        
+        peso = st.number_input(
+            "**Peso do Paciente (kg):**", 
+            min_value=1, 
+            max_value=80, 
+            value=70,
+            key="calculadora_peso"
+        )
+    
+    with col2:
+        vasoconstritor = st.selectbox(
+            "**Selecione o Vasoconstritor:**", 
+            ['Nenhum', '1:50000 epinefrina', '1:100000 epinefrina', '1:200000 epinefrina', 
+             '1:30000 noradrenalina', '1:2500 fenilefrina', '0.03UI/ml felipressina'],
+            key="calculadora_vasoconstritor"
+        )
+        
+        asa = None
+        if vasoconstritor != "Nenhum":
+            asa = st.selectbox(
+                "**Classificação ASA:**", 
+                ['ASA I/II', 'ASA III/IV'],
+                key="calculadora_asa"
+            )
+    
+    if st.button("💉 Calcular Dose Máxima", key="calculadora_botao"):
+        resultado = calcular_dose_maxima(
+            sal_anestesico, 
+            concentracao, 
+            peso, 
+            vasoconstritor if vasoconstritor != "Nenhum" else None, 
+            asa
+        )
+        
+        if isinstance(resultado, str):
+            st.error(resultado)
+        else:
+            dose_maxima_mg, numero_de_tubetes, obs, vaso_obs = resultado
+            
+            st.success(f"### 💊 Dose Máxima: {dose_maxima_mg:.2f} mg\n### 💉 Número Máximo de Tubetes: {numero_de_tubetes}")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown(f"**📌 Informações sobre o Sal Anestésico:**\n{obs}")
+            
+            with col2:
+                if vaso_obs:
+                    st.markdown(f"**📌 Informações sobre o Vasoconstritor:**\n{vaso_obs}")
+            
+            st.caption("📖 Referência: Manual de anestesia local / Stanley F. Malamed; [tradução Fernando Mundim...et al.]. Rio de Janeiro: Elsevier, 2013.")
 
-2. **Travessia da membrana**:
-   - Apenas a forma não-ionizada (RN) consegue atravessar a membrana lipídica da bainha do nervo
-   - Quanto maior a proporção de RN, mais rápida é a penetração no nervo
+# Rodapé com informações adicionais
+st.markdown("---")
+st.markdown("""
+### 📚 Sobre este aplicativo
 
-3. **Reequilíbrio no meio intracelular (pH 7,4)**:
-   - No interior da célula, o anestésico se reequilibra nas formas RN e RNH⁺
-   - A forma ionizada (RNH⁺) é a responsável pelo bloqueio dos canais de sódio
+Este aplicativo combina um simulador do mecanismo de ação dos anestésicos locais e uma calculadora de dose máxima em uma única interface.
 
-4. **Bloqueio do canal de sódio**:
-   - RNH⁺ se move em direção ao canal de sódio localizado na bainha do nervo
-   - RNH⁺ se liga ao receptor no canal de sódio, bloqueando-o
-   - Isso impede a propagação do potencial de ação
-   - Resulta em bloqueio da condução nervosa e anestesia local
+- **Simulador**: Visualize como os anestésicos locais interagem com os canais de sódio nas membranas nervosas.
+- **Calculadora**: Determine a dose máxima segura com base no peso do paciente e outros fatores clínicos.
 
-**Referência bibliográfica:**
-RANG, H.P.; DALE, M.M.; RITTER, J.M.; FLOWER, R.J.; HENDERSON, G. Farmacologia. 8. ed. Rio de Janeiro: Elsevier, 2016.
+Desenvolvido para fins educacionais e de referência clínica.
 """)
