@@ -83,6 +83,7 @@ st.sidebar.markdown(f"""
 """)
 
 def criar_imagem_estatica(etapa=1):
+    # Usar figsize fixo para todas as etapas
     fig, ax = plt.subplots(figsize=(10, 6))
     
     # Cores
@@ -109,8 +110,7 @@ def criar_imagem_estatica(etapa=1):
     for i in np.arange(0.05, 0.95, 0.05):
         ax.add_patch(Rectangle((i-0.015, 0.42), 0.03, 0.06, facecolor=cor_membrana_lipidica, edgecolor='none', alpha=0.8))
     
-    # Adicionar canais de sódio na membrana (bainha do nervo)
-    # Posicionando os canais de sódio na membrana, não no interior da célula
+    # Adicionar canais de sódio na membrana (bainha do nervo) em todas as etapas
     canal_positions = [0.2, 0.5, 0.8]
     for pos in canal_positions:
         # Canal de sódio representado como uma estrutura na membrana
@@ -233,7 +233,7 @@ def criar_imagem_estatica(etapa=1):
         ax.text(canal_alvo_x, 0.46, "✕", ha='center', va='center', fontsize=12, 
                 color='black', fontweight='bold')
     
-    # Configurações do gráfico
+    # Configurações do gráfico - Manter consistentes em todas as etapas
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.set_aspect('equal')
@@ -254,7 +254,7 @@ def criar_imagem_estatica(etapa=1):
     
     ax.set_title(titulo, fontsize=14, fontweight='bold')
     
-    # Legenda personalizada
+    # Legenda personalizada - Manter consistente em todas as etapas
     handles = [
         mpatches.Patch(color='blue', alpha=0.7, label='RN (Base livre)'),
         mpatches.Patch(color='red', alpha=0.7, label='RNH⁺ (Forma ionizada)'),
@@ -266,6 +266,9 @@ def criar_imagem_estatica(etapa=1):
     # Adicionar nota de referência
     ax.text(0.02, 0.02, "Baseado em: Mecanismo de ação dos anestésicos locais. Adaptado para fins educacionais.", 
             fontsize=6, style='italic')
+    
+    # Garantir que o tamanho da figura seja consistente
+    fig.tight_layout(pad=1.0)
     
     return fig
 
