@@ -82,8 +82,8 @@ st.sidebar.markdown(f"""
 - % Base (RN): {base_percent_tabela}%
 """)
 
-def criar_imagem_estatica(etapa=1):
-    # Usar figsize fixo para todas as etapas
+def criar_imagem_mecanismo():
+    # Usar figsize fixo
     fig, ax = plt.subplots(figsize=(10, 6))
     
     # Cores
@@ -110,12 +110,19 @@ def criar_imagem_estatica(etapa=1):
     for i in np.arange(0.05, 0.95, 0.05):
         ax.add_patch(Rectangle((i-0.015, 0.42), 0.03, 0.06, facecolor=cor_membrana_lipidica, edgecolor='none', alpha=0.8))
     
-    # Adicionar canais de sódio na membrana (bainha do nervo) em todas as etapas
+    # Adicionar canais de sódio na membrana (bainha do nervo)
     canal_positions = [0.2, 0.5, 0.8]
     for pos in canal_positions:
-        # Canal de sódio representado como uma estrutura na membrana
-        ax.add_patch(Rectangle((pos-0.03, 0.42), 0.06, 0.08, facecolor='#d3d3d3', edgecolor='black', alpha=0.9))
-        ax.text(pos, 0.38, "Na⁺", ha='center', fontsize=8, fontweight='bold')
+        if pos != 0.5:  # Canais normais
+            ax.add_patch(Rectangle((pos-0.03, 0.42), 0.06, 0.08, facecolor='#d3d3d3', edgecolor='black', alpha=0.9))
+            ax.text(pos, 0.38, "Na⁺", ha='center', fontsize=8, fontweight='bold')
+        else:  # Canal bloqueado
+            ax.add_patch(Rectangle((pos-0.03, 0.42), 0.06, 0.08, 
+                                  facecolor='#ff6347', edgecolor='black', alpha=0.7))
+            ax.text(pos, 0.38, "Na⁺\nBloqueado", ha='center', fontsize=8, fontweight='bold')
+            # Adicionar símbolo de bloqueio (X) sobre o canal
+            ax.text(pos, 0.46, "✕", ha='center', va='center', fontsize=12, 
+                    color='black', fontweight='bold')
     
     # Adicionar legendas para as regiões
     ax.text(0.5, 0.85, f"Extracelular (pH {pH})", ha='center', fontsize=12, fontweight='bold')
@@ -143,118 +150,48 @@ def criar_imagem_estatica(etapa=1):
     texto_rnh_intra = ax.text(0.2, 0.15, f"RNH⁺: {rnh_intra}\n({acid_percent:.1f}%)", ha='center', fontsize=10)
     texto_rn_intra = ax.text(0.8, 0.15, f"RN: {rn_intra}\n({base_percent:.1f}%)", ha='center', fontsize=10)
     
-    # Número de partículas para visualização
-    n_particulas = 20
-    n_rn = int(n_particulas * (base_percent / 100))
-    n_rnh = n_particulas - n_rn
+    # Adicionar partículas
+    # RNH+ no extracelular
+    rnh_extra_x = np.array([0.15, 0.25, 0.18, 0.22])
+    rnh_extra_y = np.array([0.7, 0.8, 0.65, 0.75])
+    ax.scatter(rnh_extra_x, rnh_extra_y, color='red', s=50, alpha=0.7)
     
-    # Posições iniciais das partículas
-    np.random.seed(42)  # Para reprodutibilidade
+    # RN no extracelular
+    rn_extra_x = np.array([0.75, 0.85, 0.78, 0.82])
+    rn_extra_y = np.array([0.7, 0.8, 0.65, 0.75])
+    ax.scatter(rn_extra_x, rn_extra_y, color='blue', s=50, alpha=0.7)
     
-    # RNH+ no extracelular (não atravessa a membrana)
-    rnh_extra_x = np.random.uniform(0.1, 0.3, n_rnh)
-    rnh_extra_y = np.random.uniform(0.6, 0.9, n_rnh)
+    # RN atravessando a membrana
+    ax.scatter([0.65], [0.45], color='blue', s=50, alpha=0.7)
     
-    # RN no extracelular (atravessa a membrana)
-    rn_extra_x = np.random.uniform(0.7, 0.9, n_rn)
-    rn_extra_y = np.random.uniform(0.6, 0.9, n_rn)
+    # RN no intracelular
+    rn_intra_x = np.array([0.7, 0.8, 0.75])
+    rn_intra_y = np.array([0.2, 0.3, 0.25])
+    ax.scatter(rn_intra_x, rn_intra_y, color='blue', s=50, alpha=0.7)
     
-    # Partículas no intracelular (inicialmente vazias)
-    rn_intra_x = np.array([])
-    rn_intra_y = np.array([])
+    # RNH+ no intracelular
+    rnh_intra_x = np.array([0.3, 0.2])
+    rnh_intra_y = np.array([0.2, 0.3])
+    ax.scatter(rnh_intra_x, rnh_intra_y, color='red', s=50, alpha=0.7)
     
-    rnh_intra_x = np.array([])
-    rnh_intra_y = np.array([])
+    # RNH+ bloqueando o canal
+    canal_alvo_x = 0.5
+    rnh_bloqueio_x = np.array([canal_alvo_x-0.01, canal_alvo_x+0.01])
+    rnh_bloqueio_y = np.array([0.45, 0.45])
+    ax.scatter(rnh_bloqueio_x, rnh_bloqueio_y, color='red', s=50, alpha=0.7)
     
-    # Etapa 1: Estado inicial
-    if etapa >= 1:
-        ax.scatter(rnh_extra_x, rnh_extra_y, color='red', s=50, alpha=0.7, label='RNH⁺ (Extracelular)')
-        ax.scatter(rn_extra_x, rn_extra_y, color='blue', s=50, alpha=0.7, label='RN (Extracelular)')
+    # Adicionar setas indicando movimento
+    # RN atravessando a membrana
+    ax.add_patch(FancyArrowPatch((0.7, 0.6), (0.65, 0.5), 
+                                arrowstyle='->', mutation_scale=15, 
+                                color='black', linewidth=2))
     
-    # Etapa 2: RN começa a atravessar a membrana
-    if etapa >= 2:
-        # Selecionar algumas partículas RN para atravessar
-        n_atravessando = min(3, n_rn)
-        for i in range(n_atravessando):
-            # Posicionar na membrana
-            ax.scatter(rn_extra_x[i], 0.45, color='blue', s=50, alpha=0.7)
-            # Remover da posição original
-            rn_extra_x[i] = np.nan
-            rn_extra_y[i] = np.nan
-        
-        # Atualizar o gráfico de RN no extracelular
-        ax.scatter(rn_extra_x, rn_extra_y, color='blue', s=50, alpha=0.7)
-        
-        # Adicionar seta indicando movimento
-        ax.add_patch(FancyArrowPatch((0.5, 0.7), (0.5, 0.5), 
-                                    arrowstyle='->', mutation_scale=15, 
-                                    color='black', linewidth=2))
+    # RNH+ bloqueando o canal
+    ax.add_patch(FancyArrowPatch((0.3, 0.3), (0.5, 0.45), 
+                                arrowstyle='->', mutation_scale=15, 
+                                color='black', linewidth=2))
     
-    # Etapa 3: RN chega ao intracelular
-    if etapa >= 3:
-        # Adicionar RN no intracelular
-        rn_intra_x = np.array([0.7, 0.8, 0.75])
-        rn_intra_y = np.array([0.2, 0.3, 0.25])
-        ax.scatter(rn_intra_x, rn_intra_y, color='blue', s=50, alpha=0.7, label='RN (Intracelular)')
-    
-    # Etapa 4: RN se converte parcialmente em RNH+ no intracelular
-    if etapa >= 4:
-        # Converter algumas partículas RN em RNH+
-        rnh_intra_x = np.array([0.3, 0.2])
-        rnh_intra_y = np.array([0.2, 0.3])
-        ax.scatter(rnh_intra_x, rnh_intra_y, color='red', s=50, alpha=0.7, label='RNH⁺ (Intracelular)')
-        
-        # Remover algumas partículas RN (convertidas)
-        rn_intra_x = np.array([0.75])
-        rn_intra_y = np.array([0.25])
-        ax.scatter(rn_intra_x, rn_intra_y, color='blue', s=50, alpha=0.7)
-    
-    # Etapa 5: RNH+ bloqueia o canal de sódio
-    if etapa >= 5:
-        # Mover RNH+ para o canal de sódio na membrana
-        canal_alvo_x = 0.5  # Posição x do canal alvo
-        
-        # Mover RNH+ para o canal
-        rnh_bloqueio_x = np.array([canal_alvo_x-0.01, canal_alvo_x+0.01])
-        rnh_bloqueio_y = np.array([0.45, 0.45])
-        ax.scatter(rnh_bloqueio_x, rnh_bloqueio_y, color='red', s=50, alpha=0.7)
-        
-        # Adicionar seta indicando movimento do RNH+ para o canal
-        ax.add_patch(FancyArrowPatch((0.3, 0.3), (0.5, 0.45), 
-                                    arrowstyle='->', mutation_scale=15, 
-                                    color='black', linewidth=2))
-        
-        # Destacar o canal bloqueado
-        ax.add_patch(Rectangle((canal_alvo_x-0.03, 0.42), 0.06, 0.08, 
-                              facecolor='#ff6347', edgecolor='black', alpha=0.7))
-        ax.text(canal_alvo_x, 0.38, "Na⁺\nBloqueado", ha='center', fontsize=8, fontweight='bold')
-        
-        # Adicionar símbolo de bloqueio (X) sobre o canal
-        ax.text(canal_alvo_x, 0.46, "✕", ha='center', va='center', fontsize=12, 
-                color='black', fontweight='bold')
-    
-    # Configurações do gráfico - Manter consistentes em todas as etapas
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
-    ax.set_aspect('equal')
-    ax.axis('off')
-    
-    # Título e legenda
-    titulo = f"Mecanismo de Ação: {anestesico_selecionado} (pKa: {pKa})"
-    if etapa == 1:
-        titulo += " - Estado Inicial"
-    elif etapa == 2:
-        titulo += " - RN Atravessa a Membrana"
-    elif etapa == 3:
-        titulo += " - RN Chega ao Intracelular"
-    elif etapa == 4:
-        titulo += " - RN se Converte em RNH⁺"
-    elif etapa == 5:
-        titulo += " - RNH⁺ Bloqueia o Canal de Na⁺ na Bainha do Nervo"
-    
-    ax.set_title(titulo, fontsize=14, fontweight='bold')
-    
-    # Legenda personalizada - Manter consistente em todas as etapas
+    # Legenda personalizada
     handles = [
         mpatches.Patch(color='blue', alpha=0.7, label='RN (Base livre)'),
         mpatches.Patch(color='red', alpha=0.7, label='RNH⁺ (Forma ionizada)'),
@@ -262,6 +199,16 @@ def criar_imagem_estatica(etapa=1):
         mpatches.Patch(color='#ff6347', alpha=0.7, label='Canal de Na⁺ Bloqueado')
     ]
     ax.legend(handles=handles, loc='upper right', fontsize=8)
+    
+    # Configurações do gráfico
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    
+    # Título
+    titulo = f"Mecanismo de Ação: {anestesico_selecionado} (pKa: {pKa})"
+    ax.set_title(titulo, fontsize=14, fontweight='bold')
     
     # Adicionar nota de referência
     ax.text(0.02, 0.02, "Baseado em: Mecanismo de ação dos anestésicos locais. Adaptado para fins educacionais.", 
@@ -274,17 +221,8 @@ def criar_imagem_estatica(etapa=1):
 
 st.header("Visualização do Mecanismo de Ação")
 
-etapa = st.slider("Etapa do mecanismo:", 1, 5, 1)
-descricoes = [
-    "Estado inicial: Distribuição das formas RN e RNH⁺ no meio extracelular",
-    "RN atravessa a membrana da bainha do nervo",
-    "RN chega ao meio intracelular",
-    "RN se converte parcialmente em RNH⁺ no meio intracelular",
-    "RNH⁺ bloqueia o canal de sódio na bainha do nervo"
-]
-
-st.caption(descricoes[etapa-1])
-fig = criar_imagem_estatica(etapa)
+# Exibir apenas a imagem final (etapa 5)
+fig = criar_imagem_mecanismo()
 st.pyplot(fig)
 
 st.header("Explicação do Mecanismo de Ação")
