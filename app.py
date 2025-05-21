@@ -1,9 +1,39 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Rectangle, FancyArrowPatch
+from matplotlib.patches import Rectangle, FancyArrowPatch, Circle, Ellipse
 import matplotlib.patheffects as path_effects
-from dados_anestesicos import anestesicos, calcular_base_livre
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.patches as mpatches
+
+# Assumindo que o arquivo dados_anestesicos.py existe
+try:
+    from dados_anestesicos import anestesicos, calcular_base_livre
+except ImportError:
+    # Definição de backup caso o arquivo não exista
+    def calcular_base_livre(pKa, pH):
+        return 100 / (1 + 10**(pKa - pH))
+    
+    anestesicos = {
+        "Lidocaína": {
+            "tipo": "Amida",
+            "pKa": 7.9,
+            "base_percent": 24,
+            "inicio_acao": "2-5"
+        },
+        "Bupivacaína": {
+            "tipo": "Amida",
+            "pKa": 8.1,
+            "base_percent": 17,
+            "inicio_acao": "5-8"
+        },
+        "Procaína": {
+            "tipo": "Éster",
+            "pKa": 8.9,
+            "base_percent": 3,
+            "inicio_acao": "6-10"
+        }
+    }
 
 st.set_page_config(
     page_title="Simulador de Anestésicos Locais",
@@ -55,22 +85,49 @@ st.sidebar.markdown(f"""
 def criar_imagem_estatica(etapa=1):
     fig, ax = plt.subplots(figsize=(10, 6))
     
-    cor_extracelular = '#ffcccc'
-    cor_intracelular = '#ffffcc'
-    cor_membrana = '#cc6666'
+    # Cores
+    cor_extracelular = '#f0f8ff'  # Azul claro para meio extracelular
+    cor_intracelular = '#fffacd'  # Amarelo claro para meio intracelular
+    cor_membrana_externa = '#87cefa'  # Azul para cabeças polares externas
+    cor_membrana_interna = '#87cefa'  # Azul para cabeças polares internas
+    cor_membrana_lipidica = '#ffa07a'  # Laranja para caudas lipídicas
     
+    # Desenhar meio extracelular e intracelular
     ax.add_patch(Rectangle((0, 0.5), 1, 0.5, facecolor=cor_extracelular, edgecolor='black', alpha=0.8))
     ax.add_patch(Rectangle((0, 0), 1, 0.5, facecolor=cor_intracelular, edgecolor='black', alpha=0.8))
-    ax.add_patch(Rectangle((0, 0.48), 1, 0.04, facecolor=cor_membrana, edgecolor='black', hatch='///', alpha=0.7))
     
+    # Desenhar a bicamada lipídica (bainha do nervo) com estrutura mais detalhada
+    # Camada externa (cabeças polares)
+    for i in np.arange(0.05, 0.95, 0.05):
+        ax.add_patch(Circle((i, 0.5), 0.02, facecolor=cor_membrana_externa, edgecolor='black', alpha=0.9))
+    
+    # Camada interna (cabeças polares)
+    for i in np.arange(0.05, 0.95, 0.05):
+        ax.add_patch(Circle((i, 0.4), 0.02, facecolor=cor_membrana_interna, edgecolor='black', alpha=0.9))
+    
+    # Caudas lipídicas entre as camadas
+    for i in np.arange(0.05, 0.95, 0.05):
+        ax.add_patch(Rectangle((i-0.015, 0.42), 0.03, 0.06, facecolor=cor_membrana_lipidica, edgecolor='none', alpha=0.8))
+    
+    # Adicionar canais de sódio na membrana (bainha do nervo)
+    # Posicionando os canais de sódio na membrana, não no interior da célula
+    canal_positions = [0.2, 0.5, 0.8]
+    for pos in canal_positions:
+        # Canal de sódio representado como uma estrutura na membrana
+        ax.add_patch(Rectangle((pos-0.03, 0.42), 0.06, 0.08, facecolor='#d3d3d3', edgecolor='black', alpha=0.9))
+        ax.text(pos, 0.38, "Na⁺", ha='center', fontsize=8, fontweight='bold')
+    
+    # Adicionar legendas para as regiões
     ax.text(0.5, 0.85, f"Extracelular (pH {pH})", ha='center', fontsize=12, fontweight='bold')
     ax.text(0.5, 0.25, f"Intracelular (pH {pH})", ha='center', fontsize=12, fontweight='bold')
-    ax.text(0.5, 0.5, "Bainha do nervo", ha='center', fontsize=10, fontweight='bold', 
-            color='white', path_effects=[path_effects.withStroke(linewidth=2, foreground='black')])
+    ax.text(0.5, 0.45, "Bainha do nervo", ha='center', fontsize=10, fontweight='bold', 
+            color='black', path_effects=[path_effects.withStroke(linewidth=2, foreground='white')])
     
+    # Calcular proporções de base/ácido
     base_percent = calcular_base_livre(pKa, pH)
     acid_percent = 100 - base_percent
     
+    # Informações sobre concentrações
     total_extracelular = 1000
     rn_extra = int(total_extracelular * (base_percent / 100))
     rnh_extra = total_extracelular - rn_extra
@@ -80,11 +137,13 @@ def criar_imagem_estatica(etapa=1):
     rn_intra = int(total_intracelular * (base_percent / 100))
     rnh_intra = total_intracelular - rn_intra
     
+    # Textos informativos
     texto_rnh_extra = ax.text(0.2, 0.75, f"RNH⁺: {rnh_extra}\n({acid_percent:.1f}%)", ha='center', fontsize=10)
     texto_rn_extra = ax.text(0.8, 0.75, f"RN: {rn_extra}\n({base_percent:.1f}%)", ha='center', fontsize=10)
     texto_rnh_intra = ax.text(0.2, 0.15, f"RNH⁺: {rnh_intra}\n({acid_percent:.1f}%)", ha='center', fontsize=10)
     texto_rn_intra = ax.text(0.8, 0.15, f"RN: {rn_intra}\n({base_percent:.1f}%)", ha='center', fontsize=10)
     
+    # Número de partículas para visualização
     n_particulas = 20
     n_rn = int(n_particulas * (base_percent / 100))
     n_rnh = n_particulas - n_rn
@@ -118,7 +177,7 @@ def criar_imagem_estatica(etapa=1):
         n_atravessando = min(3, n_rn)
         for i in range(n_atravessando):
             # Posicionar na membrana
-            ax.scatter(rn_extra_x[i], 0.5, color='blue', s=50, alpha=0.7)
+            ax.scatter(rn_extra_x[i], 0.45, color='blue', s=50, alpha=0.7)
             # Remover da posição original
             rn_extra_x[i] = np.nan
             rn_extra_y[i] = np.nan
@@ -127,7 +186,7 @@ def criar_imagem_estatica(etapa=1):
         ax.scatter(rn_extra_x, rn_extra_y, color='blue', s=50, alpha=0.7)
         
         # Adicionar seta indicando movimento
-        ax.add_patch(FancyArrowPatch((0.5, 0.7), (0.5, 0.6), 
+        ax.add_patch(FancyArrowPatch((0.5, 0.7), (0.5, 0.5), 
                                     arrowstyle='->', mutation_scale=15, 
                                     color='black', linewidth=2))
     
@@ -152,28 +211,35 @@ def criar_imagem_estatica(etapa=1):
     
     # Etapa 5: RNH+ bloqueia o canal de sódio
     if etapa >= 5:
-        # Adicionar canal de sódio
-        canal_x = 0.4
-        canal_y = 0.2
-        ax.add_patch(Rectangle((canal_x-0.05, canal_y-0.05), 0.1, 0.1, 
-                              facecolor='gray', edgecolor='black', alpha=0.7))
-        ax.text(canal_x, canal_y-0.1, "Canal de Na⁺", ha='center', fontsize=8)
+        # Mover RNH+ para o canal de sódio na membrana
+        canal_alvo_x = 0.5  # Posição x do canal alvo
         
         # Mover RNH+ para o canal
-        rnh_intra_x = np.array([0.4, 0.38])
-        rnh_intra_y = np.array([0.2, 0.22])
-        ax.scatter(rnh_intra_x, rnh_intra_y, color='red', s=50, alpha=0.7)
+        rnh_bloqueio_x = np.array([canal_alvo_x-0.01, canal_alvo_x+0.01])
+        rnh_bloqueio_y = np.array([0.45, 0.45])
+        ax.scatter(rnh_bloqueio_x, rnh_bloqueio_y, color='red', s=50, alpha=0.7)
         
-        # Adicionar seta indicando bloqueio
-        ax.add_patch(FancyArrowPatch((0.3, 0.3), (0.38, 0.22), 
+        # Adicionar seta indicando movimento do RNH+ para o canal
+        ax.add_patch(FancyArrowPatch((0.3, 0.3), (0.5, 0.45), 
                                     arrowstyle='->', mutation_scale=15, 
                                     color='black', linewidth=2))
+        
+        # Destacar o canal bloqueado
+        ax.add_patch(Rectangle((canal_alvo_x-0.03, 0.42), 0.06, 0.08, 
+                              facecolor='#ff6347', edgecolor='black', alpha=0.7))
+        ax.text(canal_alvo_x, 0.38, "Na⁺\nBloqueado", ha='center', fontsize=8, fontweight='bold')
+        
+        # Adicionar símbolo de bloqueio (X) sobre o canal
+        ax.text(canal_alvo_x, 0.46, "✕", ha='center', va='center', fontsize=12, 
+                color='black', fontweight='bold')
     
+    # Configurações do gráfico
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.set_aspect('equal')
     ax.axis('off')
     
+    # Título e legenda
     titulo = f"Mecanismo de Ação: {anestesico_selecionado} (pKa: {pKa})"
     if etapa == 1:
         titulo += " - Estado Inicial"
@@ -184,10 +250,22 @@ def criar_imagem_estatica(etapa=1):
     elif etapa == 4:
         titulo += " - RN se Converte em RNH⁺"
     elif etapa == 5:
-        titulo += " - RNH⁺ Bloqueia o Canal de Na⁺"
+        titulo += " - RNH⁺ Bloqueia o Canal de Na⁺ na Bainha do Nervo"
     
     ax.set_title(titulo, fontsize=14, fontweight='bold')
-    ax.legend(loc='upper right', fontsize=8)
+    
+    # Legenda personalizada
+    handles = [
+        mpatches.Patch(color='blue', alpha=0.7, label='RN (Base livre)'),
+        mpatches.Patch(color='red', alpha=0.7, label='RNH⁺ (Forma ionizada)'),
+        mpatches.Patch(color='#d3d3d3', alpha=0.9, label='Canal de Na⁺'),
+        mpatches.Patch(color='#ff6347', alpha=0.7, label='Canal de Na⁺ Bloqueado')
+    ]
+    ax.legend(handles=handles, loc='upper right', fontsize=8)
+    
+    # Adicionar nota de referência
+    ax.text(0.02, 0.02, "Baseado em: Mecanismo de ação dos anestésicos locais. Adaptado para fins educacionais.", 
+            fontsize=6, style='italic')
     
     return fig
 
@@ -199,7 +277,7 @@ descricoes = [
     "RN atravessa a membrana da bainha do nervo",
     "RN chega ao meio intracelular",
     "RN se converte parcialmente em RNH⁺ no meio intracelular",
-    "RNH⁺ bloqueia o canal de sódio"
+    "RNH⁺ bloqueia o canal de sódio na bainha do nervo"
 ]
 
 st.caption(descricoes[etapa-1])
@@ -215,7 +293,7 @@ st.markdown(f"""
    - Com pKa de {pKa}, aproximadamente {anestesicos[anestesico_selecionado]['base_percent']}% está na forma de base livre (RN)
 
 2. **Travessia da membrana**:
-   - Apenas a forma não-ionizada (RN) consegue atravessar a membrana lipídica
+   - Apenas a forma não-ionizada (RN) consegue atravessar a membrana lipídica da bainha do nervo
    - Quanto maior a proporção de RN, mais rápida é a penetração no nervo
 
 3. **Reequilíbrio no meio intracelular (pH 7,4)**:
@@ -223,7 +301,11 @@ st.markdown(f"""
    - A forma ionizada (RNH⁺) é a responsável pelo bloqueio dos canais de sódio
 
 4. **Bloqueio do canal de sódio**:
+   - RNH⁺ se move em direção ao canal de sódio localizado na bainha do nervo
    - RNH⁺ se liga ao receptor no canal de sódio, bloqueando-o
    - Isso impede a propagação do potencial de ação
    - Resulta em bloqueio da condução nervosa e anestesia local
+
+**Referência bibliográfica:**
+RANG, H.P.; DALE, M.M.; RITTER, J.M.; FLOWER, R.J.; HENDERSON, G. Farmacologia. 8. ed. Rio de Janeiro: Elsevier, 2016.
 """)
