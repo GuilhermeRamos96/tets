@@ -176,7 +176,7 @@ def criar_imagem_mecanismo(anestesico_selecionado, pKa, pH):
     rn_extra = int(total_extracelular * (base_percent / 100))
     rnh_extra = total_extracelular - rn_extra
     
-    total_intracelular = int(rnh_extra)
+    total_intracelular = int(rn_extra)
     rn_intra = int(total_intracelular * (base_percent / 100))
     rnh_intra = total_intracelular - rn_intra
     
