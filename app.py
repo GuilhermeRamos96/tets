@@ -54,10 +54,6 @@ anestesicos = {
     }
 }
 
-# Função para calcular a porcentagem de base livre
-def calcular_base_livre(pKa, pH):
-    return 100 / (1 + 10**(pKa - pH))
-
 # Função para calcular dose máxima
 def calcular_dose_maxima(sal_anestesico, concentracao, peso, vasoconstritor=None, asa=None):
     doses = {
@@ -119,7 +115,7 @@ def calcular_dose_maxima(sal_anestesico, concentracao, peso, vasoconstritor=None
     return dose_maxima_mg, int(numero_de_tubetes), obs, vaso_obs
 
 # Função para criar a imagem do mecanismo de ação
-def criar_imagem_mecanismo(anestesico_selecionado, pKa, pH):
+def criar_imagem_mecanismo(anestesico_selecionado, pKa, base_percent):
     # Usar figsize fixo
     fig, ax = plt.subplots(figsize=(10, 6))
     
@@ -162,13 +158,12 @@ def criar_imagem_mecanismo(anestesico_selecionado, pKa, pH):
                     color='black', fontweight='bold')
     
     # Adicionar legendas para as regiões
-    ax.text(0.5, 0.85, f"Extracelular (pH {pH})", ha='center', fontsize=12, fontweight='bold')
-    ax.text(0.5, 0.25, f"Intracelular (pH {pH})", ha='center', fontsize=12, fontweight='bold')
+    ax.text(0.5, 0.85, "Extracelular (pH 7,4)", ha='center', fontsize=12, fontweight='bold')
+    ax.text(0.5, 0.25, "Intracelular (pH 7,4)", ha='center', fontsize=12, fontweight='bold')
     ax.text(0.5, 0.45, "Bainha do nervo", ha='center', fontsize=10, fontweight='bold', 
             color='black', path_effects=[path_effects.withStroke(linewidth=2, foreground='white')])
     
-    # Calcular proporções de base/ácido
-    base_percent = calcular_base_livre(pKa, pH)
+    # Usar os valores pré-definidos de base_percent
     acid_percent = 100 - base_percent
     
     # Informações sobre concentrações
@@ -294,24 +289,18 @@ with tab1:
             """)
         
         pKa = anestesicos[anestesico_selecionado]['pKa']
-        pH = 7.4
-        base_percent_calculada = calcular_base_livre(pKa, pH)
-        acid_percent_calculada = 100 - base_percent_calculada
-        base_percent_tabela = anestesicos[anestesico_selecionado]['base_percent']
+        base_percent = anestesicos[anestesico_selecionado]['base_percent']
+        acid_percent = 100 - base_percent
         
-        st.subheader("Cálculos")
+        st.subheader("Proporções em pH 7,4")
         st.markdown(f"""
-        **Usando a equação de Henderson-Hasselbalch:**
-        - % Base (RN) calculada: {base_percent_calculada:.2f}%
-        - % Ácido (RNH⁺) calculada: {acid_percent_calculada:.2f}%
-        
-        **Valor da tabela:**
-        - % Base (RN): {base_percent_tabela}%
+        - **% Base (RN):** {base_percent}%
+        - **% Ácido (RNH⁺):** {acid_percent}%
         """)
     
     with col2:
         # Exibir a imagem do mecanismo de ação
-        fig = criar_imagem_mecanismo(anestesico_selecionado, pKa, pH)
+        fig = criar_imagem_mecanismo(anestesico_selecionado, pKa, base_percent)
         st.pyplot(fig)
     
     st.header("Explicação do Mecanismo de Ação")
