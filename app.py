@@ -18,9 +18,9 @@ st.set_page_config(
 anestesicos = {
     "Lidocaína": {
         "tipo": "Amida",
-        "pKa": 7.9,
-        "base_percent": 24,
-        "inicio_acao": "2-5"
+        "pKa": 7.7,
+        "base_percent": 25,
+        "inicio_acao": "2-4"
     },
     "Bupivacaína": {
         "tipo": "Amida",
@@ -30,19 +30,19 @@ anestesicos = {
     },
     "Procaína": {
         "tipo": "Éster",
-        "pKa": 8.9,
-        "base_percent": 3,
-        "inicio_acao": "6-10"
+        "pKa": 9.1,
+        "base_percent": 2,
+        "inicio_acao": "14-18"
     },
     "Mepivacaína": {
         "tipo": "Amida",
-        "pKa": 7.6,
-        "base_percent": 39,
-        "inicio_acao": "3-5"
+        "pKa": 7.7,
+        "base_percent": 33,
+        "inicio_acao": "2-4"
     },
     "Prilocaína": {
         "tipo": "Amida",
-        "pKa": 7.9,
+        "pKa": 7.7,
         "base_percent": 25,
         "inicio_acao": "2-4"
     },
@@ -50,7 +50,7 @@ anestesicos = {
         "tipo": "Amida/Éster",
         "pKa": 7.8,
         "base_percent": 29,
-        "inicio_acao": "1-3"
+        "inicio_acao": "2-4"
     }
 }
 
