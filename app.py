@@ -326,7 +326,7 @@ with tab1:
        - Resulta em bloqueio da condução nervosa e anestesia local
     
     **Referência bibliográfica:**
-    RANG, H.P.; DALE, M.M.; RITTER, J.M.; FLOWER, R.J.; HENDERSON, G. Farmacologia. 8. ed. Rio de Janeiro: Elsevier, 2016.
+    Manual de anestesia local / Stanley F. Malamed; [tradução Fernando Mundim...et al.]. Rio de Janeiro: Elsevier, 2013.
     """)
 
 # Aba 2: Calculadora de Dose Máxima
@@ -417,9 +417,6 @@ st.markdown("""
 ### 📚 Sobre este aplicativo
 
 Este aplicativo combina um simulador do mecanismo de ação dos anestésicos locais e uma calculadora de dose máxima em uma única interface.
-
-- **Simulador**: Visualize como os anestésicos locais interagem com os canais de sódio nas membranas nervosas.
-- **Calculadora**: Determine a dose máxima segura com base no peso do paciente e outros fatores clínicos.
 
 Desenvolvido para fins educacionais e de referência clínica.
 """)
