@@ -326,7 +326,7 @@ with tab1:
        - Resulta em bloqueio da condução nervosa e anestesia local
     
     **Referência bibliográfica:**
-    Manual de anestesia local / Stanley F. Malamed; [tradução Fernando Mundim...et al.]. Rio de Janeiro: Elsevier, 2013.
+    Manual de anestesia local / Stanley F. Malamed. Rio de Janeiro: Elsevier, 2013.
     """)
 
 # Aba 2: Calculadora de Dose Máxima
@@ -409,7 +409,7 @@ with tab2:
                 if vaso_obs:
                     st.markdown(f"**📌 Informações sobre o Vasoconstritor:**\n{vaso_obs}")
             
-            st.caption("📖 Referência: Manual de anestesia local / Stanley F. Malamed; [tradução Fernando Mundim...et al.]. Rio de Janeiro: Elsevier, 2013.")
+            st.caption("📖 Referência: Manual de anestesia local / Stanley F. Malamed. Rio de Janeiro: Elsevier, 2013.")
 
 # Rodapé com informações adicionais
 st.markdown("---")
